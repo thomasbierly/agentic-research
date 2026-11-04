@@ -3,7 +3,7 @@
 --   * In a project folder (Git repo, Quarto or Python project) the file list
 --     opens on the left at startup. One click opens a file or folder.
 --   * Right-click anywhere in the text for a menu of everyday actions
---     (preview, find a file, search, show/hide the file list).
+--     (preview, analysis notebook, find a file, search, show/hide the file list).
 --   * Press Space and wait: a menu of every shortcut appears (which-key).
 
 -- The project folder: the nearest one above with a Quarto config, a Git repo
@@ -22,11 +22,20 @@ local function project_root()
   return vim.fs.dirname(found)
 end
 
+-- The analysis notebook (marimo) runs in the project's run tab; this opens its
+-- window, showing the notebook being edited if it is one.
+function _G.open_analysis_notebook()
+  local file = vim.api.nvim_buf_get_name(0)
+  local root = vim.fs.root(0, { ".git", "pyproject.toml" }) or project_root() or vim.fn.getcwd()
+  vim.fn.jobstart({ "ws", "--open-notebook", root, file }, { detach = true })
+end
+
 -- Right-click menu entries, above Neovim's own (Copy, Paste, ...).
 local function add_menu()
   local items = {
     { "Show\\ PDF\\ preview\\ (click\\ text\\ to\\ jump\\ here)", [[lua require("quarto_typst_sync").start()]] },
     { "Show\\ this\\ spot\\ in\\ the\\ preview", [[lua require("quarto_typst_sync").sync()]] },
+    { "Open\\ the\\ analysis\\ notebook", [[lua open_analysis_notebook()]] },
     { "Find\\ a\\ file\\.\\.\\.", [[lua LazyVim.pick("files")()]] },
     { "Search\\ all\\ files\\ for\\ text\\.\\.\\.", [[lua LazyVim.pick("live_grep")()]] },
     { "Show\\ or\\ hide\\ the\\ file\\ list", [[Neotree toggle reveal]] },

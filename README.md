@@ -10,14 +10,14 @@ The step-by-step guide, with screenshots, starting from installing Omarchy:
 ## What you get
 
 - **Projects** in the Omarchy menu (Super + Space): *New project…* creates a
-  folder with `src/` (code), `data/`, `analysis/` (notebooks) and `paper/`
+  folder with `src/` (code), `data/`, `analysis/` ([marimo](https://marimo.io) notebooks) and `paper/`
   (Quarto), a Python environment and a Git repository, and opens it.
 - Each project opens in a **Herdr workspace** with tabs for the work:
 
   | Tab | What runs there |
   |---|---|
   | work | Neovim beside Claude Code |
-  | run | a shell for your software beside an IPython console for the data |
+  | run | a shell for your software, and your marimo notebooks: press Enter there (or right-click in the editor) to open them in their own window |
   | paper | Quarto, re-rendering the paper to PDF each time you save |
   | review | Hunk: every change, by you or the agent, line by line; leave a note on any line and Claude answers it there |
   | git | lazygit: save versions and back them up to GitHub |
@@ -52,6 +52,7 @@ Anything the installer would replace is kept next to it with a
 | open a project | Super + Space > Projects > its name |
 | open a file | click it in the file list on the left |
 | see the PDF | right-click in the text > Show PDF preview, then click any sentence to jump there |
+| open the analysis notebook | right-click in the text > Open the analysis notebook |
 | cite a paper | `\ci` in a `.qmd` file (Zotero must be open) |
 | switch tabs | Alt + 1 … 5 |
 | find any shortcut | press Space in Neovim and wait |
