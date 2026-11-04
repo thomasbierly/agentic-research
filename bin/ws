@@ -459,7 +459,7 @@ case "$layout" in research|writing|analysis|dev) ;; *) fail "unknown layout '$la
 [[ -n "$detect" ]] && { echo "$label: $layout"; exit 0; }
 
 # ---- the programs each tab runs (used to build a workspace and to restart them) ----
-REVIEW_CMD="hunk diff --watch --wrap --agent-notes"
+REVIEW_CMD="hunk diff --watch --mode split --wrap --agent-notes"   # old on the left, new on the right
 
 # Writing: a Typst book previews in Neovim's click-to-source window (\qv), so
 # quarto only re-renders on save and does not open a browser.
