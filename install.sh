@@ -121,6 +121,12 @@ else
   herdr integration install claude >/dev/null 2>&1 && ok "Herdr shows when Claude is working or needs you" \
     || warn "could not set up the Herdr integration (run: herdr integration install claude)"
 fi
+# Hunk's own instructions for agents, so Claude can read and answer your notes in the review tab.
+# Copied rather than linked: Hunk keeps it in a versioned folder that an update replaces.
+if [[ -d "$HOME/.claude" ]] && command -v hunk >/dev/null && skill=$(hunk skill path hunk-review 2>/dev/null); then
+  mkdir -p "$HOME/.claude/skills/hunk-review"
+  cp "$skill" "$HOME/.claude/skills/hunk-review/SKILL.md" && ok "Claude can read and answer your notes in Hunk"
+fi
 
 # ---- done ----------------------------------------------------------------------------
 cat <<'EOF'

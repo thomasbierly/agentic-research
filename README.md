@@ -19,7 +19,7 @@ The step-by-step guide, with screenshots, starting from installing Omarchy:
   | work | Neovim beside Claude Code |
   | run | a shell for your software beside an IPython console for the data |
   | paper | Quarto, re-rendering the paper to PDF each time you save |
-  | review | Hunk: every change, by you or the agent, line by line |
+  | review | Hunk: every change, by you or the agent, line by line; leave a note on any line and Claude answers it there |
   | git | lazygit: save versions and back them up to GitHub |
 
   Reopening a project after a restart brings all of these back.
