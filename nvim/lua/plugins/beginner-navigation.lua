@@ -22,7 +22,7 @@ local function project_root()
   return vim.fs.dirname(found)
 end
 
--- The analysis notebook (marimo) runs in the project's run tab; this opens its
+-- The analysis notebook (marimo) runs in the project's analysis tab; this opens its
 -- window, showing the notebook being edited if it is one.
 function _G.open_analysis_notebook()
   local file = vim.api.nvim_buf_get_name(0)

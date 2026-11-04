@@ -17,7 +17,7 @@ The step-by-step guide, with screenshots, starting from installing Omarchy:
   | Tab | What runs there |
   |---|---|
   | work | Neovim beside Claude Code |
-  | run | a shell for your software, and your marimo notebooks: press Enter there (or right-click in the editor) to open them in their own window |
+  | analysis | a shell for your software and command-line tools, and your marimo notebooks: press Enter there (or right-click in the editor) to open them in their own window. Notebooks can use SQL and connect to databases; passwords go in `.env`, which Git ignores |
   | paper | Quarto, re-rendering the paper to PDF each time you save |
   | review | Hunk: every change, by you or the agent, line by line; leave a note on any line and Claude answers it there |
   | git | lazygit: save versions and back them up to GitHub |

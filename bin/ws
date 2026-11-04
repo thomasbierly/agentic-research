@@ -6,12 +6,12 @@
 #   ws --new research|writing|analysis|dev [--name name]
 #                  create a project (asks for the name if not given), add it to
 #                  the menu and open it, in ~/Projects (the menu's New project is research)
-#   ws --notebook [folder]   serve the project's marimo notebooks (analysis/); runs in the run tab
+#   ws --notebook [folder]   serve the project's marimo notebooks (analysis/); runs in the analysis tab
 #   ws --open-notebook [folder] [file]   open a notebook window (the editor's right-click menu)
 #
 # Layouts (picked from the project's files unless --layout is given):
 #   research  software, data analysis and paper in one repo (paper/_quarto.yml)
-#             work: LazyVim | Claude   run: shell | marimo notebooks   paper: quarto preview
+#             work: LazyVim | Claude   analysis: shell | marimo notebooks   paper: quarto preview
 #             review: Hunk   git: lazygit
 #   writing   Quarto book or manuscript (_quarto.yml)
 #             write: LazyVim | Claude   review: Hunk   build: quarto preview
@@ -129,7 +129,7 @@ if [[ -n "$new" ]]; then
       # Python package name: lowercase letters, digits and _, starting with a letter
       pkg=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_' '_' | sed 's/_*$//; s/^\([0-9]\)/p\1/')
       ( cd "$dir" && uv init -q --lib --name "$pkg" ) || fail "uv init failed"
-      ( cd "$dir" && uv add -q marimo jupyter pandas matplotlib ) \
+      ( cd "$dir" && uv add -q "marimo[sql]" jupyter pandas matplotlib ) \
         || echo "ws: could not install marimo/jupyter/pandas/matplotlib (offline?); run 'uv add marimo' later" >&2
       # let the editor's Python checker find the project's packages in .venv
       printf '\n[tool.pyright]\nvenvPath = "."\nvenv = ".venv"\n' >>"$dir/pyproject.toml"
@@ -149,6 +149,21 @@ if [[ -n "$new" ]]; then
 Figures and tables made in analysis/ are saved to paper/figures/ and
 paper/tables/, so re-running an analysis updates the paper.
 EOF
+      cat >"$dir/CLAUDE.md" <<'AGENTS'
+# Notes for agents
+
+- `src/` holds the software, `data/` the data, `analysis/` the marimo notebooks
+  and `paper/` the Quarto paper. Figures and tables made in the notebooks are
+  saved to `paper/figures/` and `paper/tables/`.
+- The notebooks in `analysis/` are usually open in a live marimo window, which
+  reruns cells when the file changes and may rewrite the file in its own format
+  (for example a cell's `return` line). Read the file again just before you edit
+  it, use edits that fail if the text is not found, and check afterwards that
+  your change is in the file (`uv run marimo check analysis/<notebook>.py`).
+- Run a whole notebook with `uv run analysis/<notebook>.py`.
+- Never put passwords or keys in the code: they go in `.env`, which Git ignores
+  and marimo loads.
+AGENTS
       cat >"$dir/data/README.md" <<'EOF'
 # Data
 
@@ -195,6 +210,31 @@ def _(pd):
     example = pd.DataFrame({"year": [2020, 2021, 2022, 2023], "value": [1, 3, 2, 5]})
     example
     return (example,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        """
+        ## Ask the data in SQL
+
+        SQL cells can query the tables above, files in data/ (for example
+        FROM 'data/survey.csv') or a database: choose Add database connection
+        in the panel on the left. Keep passwords in a .env file next to
+        pyproject.toml; Git ignores it, and marimo reads it.
+        """
+    )
+    return
+
+
+@app.cell
+def _(example, mo):
+    recent = mo.sql(
+        f"""
+        SELECT year, value FROM example WHERE year >= 2022
+        """
+    )
+    return (recent,)
 
 
 @app.cell(hide_code=True)
@@ -265,7 +305,7 @@ Start writing here. Keep one paragraph per line.
 :::
 EOF
       : >"$dir/paper/references.bib"
-      printf '.venv/\n__pycache__/\n__marimo__/\n.quarto/\n*_files/\n_output/\npaper/index.typ\npaper/index.pdf\nanalysis/*.html\n' >"$dir/.gitignore"
+      printf '.env\n.venv/\n__pycache__/\n__marimo__/\n.quarto/\n*_files/\n_output/\npaper/index.typ\npaper/index.pdf\nanalysis/*.html\n' >"$dir/.gitignore"
       ;;
     writing)
       mkdir -p "$dir/chapters"
@@ -333,7 +373,7 @@ dir="$(realpath "${dir:-$PWD}")"
 label="${label:-$(basename "$dir")}"
 
 # ---- ws --notebook: the project's marimo notebooks, in a window of their own ----
-# Runs in the run tab. It serves analysis/ on this computer only (with a secret
+# Runs in the analysis tab. It serves analysis/ on this computer only (with a secret
 # token in the link) and waits: Enter opens the notebook window, like the PDF
 # preview; Ctrl+C stops the server. The link is kept for --open-notebook.
 NB_STATE="${XDG_RUNTIME_DIR:-/tmp}/ws-notebooks"
@@ -343,8 +383,8 @@ nb_open() {   # nb_open <url>
 }
 if [[ -n "$open_notebook" ]]; then
   url=$(cat "$NB_STATE/$(nb_key)" 2>/dev/null) && curl -s -o /dev/null "${url%%\?*}" \
-    || { notify-send "Notebook" "The notebook isn't running: open the project's run tab and press Enter there." 2>/dev/null
-         echo "ws: no notebook running for $dir (start it in the run tab)" >&2; exit 1; }
+    || { notify-send "Notebook" "The notebook isn't running: open the project's analysis tab and press Enter there." 2>/dev/null
+         echo "ws: no notebook running for $dir (start it in the analysis tab)" >&2; exit 1; }
   if [[ -n "$nbfile" ]]; then
     rel=$(realpath --relative-to="$dir/analysis" "$nbfile" 2>/dev/null || true)
     [[ "$rel" == *.py && "$rel" != ../* ]] && url="${url%%&file=*}&file=$rel"
@@ -362,9 +402,9 @@ if [[ -n "$notebook" ]]; then
   url="http://127.0.0.1:$port/?access_token=$token${first:+&file=$(basename "$first")}"
   log="$NB_STATE/$(nb_key).log"
   if [[ -f "$dir/pyproject.toml" ]]; then
-    marimo=(uv run --project "$dir" --with marimo marimo)   # the project's packages, plus marimo
+    marimo=(uv run --project "$dir" --with "marimo[sql]" marimo)   # the project's packages, plus marimo
   else
-    marimo=(uvx --with pandas --with matplotlib marimo)
+    marimo=(uvx --from "marimo[sql]" --with pandas --with matplotlib marimo)
   fi
   echo "Starting the notebooks (the first time takes a minute)..."
   ( cd "$dir" && exec "${marimo[@]}" edit analysis --headless --watch --port "$port" --token-password "$token" ) >"$log" 2>&1 &
@@ -376,16 +416,21 @@ if [[ -n "$notebook" ]]; then
     sleep 0.5
   done
   printf '%s\n' "$url" >"$NB_STATE/$(nb_key)"
-  clear
-  cols=$( { stty size </dev/tty; } 2>/dev/null | cut -d' ' -f2 || true)   # wrap between words to fit the pane
-  { echo "The notebooks for $label are ready."
-    echo
-    echo "Press Enter to open the notebook window, or right-click in the editor and choose Open the analysis notebook."
-    echo
-    echo "Each notebook is a .py file in analysis/. When you or the agent change one, the open window updates."
-    echo
-    echo "Ctrl+C stops the notebooks."
-  } | fold -s -w "$(( ${cols:-80} - 1 ))"
+  nb_message() {   # wrapped between words to fit the pane; redrawn when the pane is resized
+    local cols
+    cols=$( { stty size </dev/tty; } 2>/dev/null | cut -d' ' -f2 || true)
+    clear
+    { echo "The notebooks for $label are ready."
+      echo
+      echo "Press Enter to open the notebook window, or right-click in the editor and choose Open the analysis notebook."
+      echo
+      echo "Each notebook is a .py file in analysis/. When you or the agent change one, the open window updates."
+      echo
+      echo "Ctrl+C stops the notebooks."
+    } | fold -s -w "$(( ${cols:-80} - 1 ))"
+  }
+  nb_message
+  trap nb_message WINCH
   while kill -0 "$server" 2>/dev/null; do
     if read -r -t 2 _; then nb_open "$url"
     elif (( $? <= 128 )); then sleep 2; fi   # no keyboard (input closed): just keep serving
@@ -488,7 +533,8 @@ revive() {   # revive <workspace id>
         writing:build)     cmd=$(writing_build_cmd) ;;
         analysis:preview)  cmd=$(analysis_preview_cmd) ;;
         analysis:console)  [[ -n "$first_in_tab" ]] && cmd=$(analysis_console_cmd) ;;
-        research:run)      [[ -z "$first_in_tab" ]] && cmd=$(notebook_cmd) ;;   # left pane is a plain shell
+        research:analysis|research:run)   # "run" in workspaces made before v1.2; left pane is a plain shell
+                           [[ -z "$first_in_tab" ]] && cmd=$(notebook_cmd) ;;
         research:paper)    cmd=$(research_paper_cmd) ;;
         research:git)      cmd="lazygit" ;;
       esac
@@ -574,7 +620,7 @@ case "$layout" in
       uv sync -q --project "$dir" || echo "uv sync failed; the console may need attention" >&2
     fi
     editor_and_agent work
-    runp=$(new_tab run)                                           # left: shell for running the software
+    runp=$(new_tab analysis)                                      # left: shell for running the software
     run "$(split_right "$runp" 0.5)" "$(notebook_cmd)"           # right: the marimo notebooks
     run "$(new_tab paper)" "$(research_paper_cmd)"
     review_tab
